@@ -56,8 +56,9 @@ type User struct {
 	CreatedAt time.Time `json:",omitempty"`
 	UpdatedAt time.Time `json:",omitempty"`
 
-	Name    string `gorm:"uniqueIndex"`
-	IsAdmin bool
+	Name     string `gorm:"uniqueIndex"`
+	IsAdmin  bool
+	Password string `json:"-"`
 
 	Comments []Comment `json:"-"`
 }

@@ -9,7 +9,7 @@ RUN git clone https://code.videolan.org/videolan/CrashDragon.git
 RUN git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 ENV PATH $PATH:/crashdragon/depot_tools
 RUN cd CrashDragon/third_party && fetch breakpad && mv src/* breakpad/ && cd breakpad && ./configure && make -j$(nproc)
-RUN cd CrashDragon && sed -i '64d' Makefile && go mod tidy && make && make prefix=/opt/crashdragon install
+RUN cd CrashDragon && go mod tidy && make && make prefix=/opt/crashdragon install
 
 FROM golang:1.20.3-bullseye
 RUN apt-get update && apt-get -y install postgresql

@@ -17,7 +17,8 @@ const (
 	ver1_2_0 = "1.2.0"
 	ver1_2_1 = "1.2.1"
 	ver1_3_0 = "1.3.0"
-	curVer   = ver1_3_0
+	ver1_3_1 = "1.3.1"
+	curVer   = ver1_3_1
 )
 
 var (
@@ -36,6 +37,10 @@ func RunMigrations() {
 	var Migration database.Migration
 	database.DB.First(&Migration, "component = 'database'")
 	switch Migration.Version {
+	case ver1_3_1:
+		log.Printf("Database migration is version 1.3.1")
+		database.DB.Exec("ALTER TABLE users ADD COLUMN password TEXT;")
+		database.DB.Exec("INSERT INTO users (name, is_admin, password)\nVALUES ('TestAdmin', TRUE, crypt('removethisuser', gen_salt('bf')));")
 	case ver1_3_0:
 		log.Printf("Database migration is version 1.3.0")
 		database.DB.Exec("ALTER TABLE reports DROP COLUMN IF EXISTS deleted_at;")
