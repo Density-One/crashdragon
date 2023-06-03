@@ -2,6 +2,7 @@ package web
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -98,6 +99,7 @@ func GetCrashes(c *gin.Context) {
 
 // GetCrash returns details of a crash
 // TODO: Cursor-based pagination
+//
 //nolint:funlen
 func GetCrash(c *gin.Context) {
 	_, ver := GetCookies(c)
@@ -121,8 +123,16 @@ func GetCrash(c *gin.Context) {
 	if ver != nil {
 		query = query.Where("version_id = ?", ver.ID)
 	}
-	query.Offset(offset).Limit(50).Association("Reports").Find(&Crash.Reports)
-	database.DB.Model(&Crash).Preload("User").Order("created_at ASC").Association("Comments").Find(&Crash.Comments)
+	err = query.Offset(offset).Limit(50).Association("Reports").Find(&Crash.Reports)
+	if err != nil {
+		log.Fatalf("Reports query error: %+v", err)
+		return
+	}
+	err = database.DB.Model(&Crash).Preload("User").Order("created_at ASC").Association("Comments").Find(&Crash.Comments)
+	if err != nil {
+		log.Fatalf("User query error: %+v", err)
+		return
+	}
 	var next int
 	var prev int
 	if (int64(offset) + 50) >= count {
