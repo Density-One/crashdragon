@@ -280,7 +280,11 @@ func InitDB(connection string) error {
 		return err
 	}
 
-	DB.AutoMigrate(&Product{}, &Version{}, &User{}, &Comment{}, &Crash{}, &CrashCount{}, &Report{}, &Symfile{}, &Migration{})
+	err = DB.AutoMigrate(&Product{}, &Version{}, &User{}, &Comment{}, &Crash{}, &CrashCount{}, &Report{}, &Symfile{}, &Migration{})
+	if err != nil {
+		log.Fatalf("AutoMigrate Database error: %+v", err)
+		return err
+	}
 	DB.Order("name ASC").Find(&Products)
 	DB.Order("string_to_array(regexp_replace(name, '[^0-9.]', '', 'g'), '.')::int[]").Find(&Versions)
 	return err
