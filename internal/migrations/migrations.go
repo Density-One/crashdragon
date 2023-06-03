@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	ver1_2_0 = "1.2.0"
-	ver1_2_1 = "1.2.1"
-	ver1_3_0 = "1.3.0"
-	ver1_3_1 = "1.3.1"
-	curVer   = ver1_3_1
+	ver120 = "1.2.0"
+	ver121 = "1.2.1"
+	ver130 = "1.3.0"
+	ver131 = "1.3.1"
+	curVer = ver131
 )
 
 var (
@@ -37,26 +37,26 @@ func RunMigrations() {
 	var Migration database.Migration
 	database.DB.First(&Migration, "component = 'database'")
 	switch Migration.Version {
-	case ver1_3_1:
+	case ver131:
 		log.Printf("Database migration is version 1.3.1")
 		database.DB.Exec("ALTER TABLE users ADD COLUMN password TEXT;")
 		database.DB.Exec("INSERT INTO users (name, is_admin, password)\nVALUES ('TestAdmin', TRUE, crypt('removethisuser', gen_salt('bf')));")
-	case ver1_3_0:
+	case ver130:
 		log.Printf("Database migration is version 1.3.0")
 		database.DB.Exec("ALTER TABLE reports DROP COLUMN IF EXISTS deleted_at;")
 		database.RemoveOldReports()
 		database.DB.Exec("UPDATE migrations SET version = '1.3.0' WHERE component = 'crashdragon';")
-	case ver1_2_1:
+	case ver121:
 		log.Printf("Database migration is version 1.2.1")
-	case ver1_2_0:
+	case ver120:
 		log.Print("Database migration is version 1.2.0")
 		var Migration2 database.Migration
 		database.DB.First(&Migration2, "component = 'crashdragon'")
-		if Migration2.Version != ver1_2_0 {
+		if Migration2.Version != ver120 {
 			log.Print("Running crash migration, please wait...")
 			migrateCrashes() // Very slow
 			migrateSymfiles()
-			Migration2.Version = ver1_2_0
+			Migration2.Version = ver120
 			database.DB.Save(&Migration2)
 			log.Print("Crashes migrated!")
 		} else {
@@ -64,11 +64,11 @@ func RunMigrations() {
 		}
 		Migration2 = database.Migration{}
 		database.DB.First(&Migration2, "component = 'database'")
-		Migration2.Version = ver1_2_1
+		Migration2.Version = ver121
 		database.DB.Save(&Migration2)
 		Migration2 = database.Migration{}
 		database.DB.First(&Migration2, "component = 'crashdragon'")
-		Migration2.Version = ver1_2_1
+		Migration2.Version = ver121
 		database.DB.Save(&Migration2)
 	default:
 		log.Fatal("Database migration version unsupported...")
