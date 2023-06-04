@@ -58,7 +58,7 @@ type User struct {
 
 	Name     string `gorm:"uniqueIndex"`
 	IsAdmin  bool
-	Password string `json:"-"`
+	Password string `gorm:"not null"`
 
 	Comments []Comment `json:"-"`
 }
