@@ -9,38 +9,52 @@ import (
 
 	"code.videolan.org/videolan/CrashDragon/internal/database"
 	"github.com/gin-gonic/gin"
-	uuid "github.com/satori/go.uuid"
 )
 
 // Auth middleware which checks the Authorization header field and looks up the user in the database
 func Auth(c *gin.Context) {
-	var user string
+	var user, userPass string
 	auth := c.GetHeader("Authorization")
 	if auth == "" {
-		c.Header("WWW-Authenticate", "Basic realm=\"CrashDragon\"")
-		c.AbortWithStatus(http.StatusUnauthorized)
+		Unauthorised(c)
 		return
 	}
 	if strings.HasPrefix(auth, "Basic ") {
 		base := strings.Split(auth, " ")[1]
-		userpass, _ := base64.StdEncoding.DecodeString(base)
-		user = strings.Split(string(userpass), ":")[0]
+		decodedBytes, _ := base64.StdEncoding.DecodeString(base)
+		split := strings.Split(string(decodedBytes), ":")
+		user = split[0]
+		userPass = split[1]
 	}
+
 	if user == "" {
-		c.Header("WWW-Authenticate", "Basic realm=\"CrashDragon\"")
-		c.AbortWithStatus(http.StatusUnauthorized)
+		Unauthorised(c)
 		return
 	}
 	var User database.User
-	database.DB.FirstOrInit(&User, "name = ?", user)
+
+	database.DB.First(&User, "name = ?", user)
+	err := VerifyPassword(User.Password, userPass)
+	if err != nil {
+		Unauthorised(c)
+		return
+	}
+
+	/*database.DB.FirstOrInit(&User, "name = ?", user)
 	if User.ID == uuid.Nil {
 		User.ID = uuid.NewV4()
 		User.IsAdmin = false
 		User.Name = user
 		database.DB.Create(&User)
-	}
+	}*/
+
 	c.Set("user", User)
 	c.Next()
+}
+
+func Unauthorised(c *gin.Context) {
+	c.Header("WWW-Authenticate", "Basic realm=\"CrashDragon\"")
+	c.AbortWithStatus(http.StatusUnauthorized)
 }
 
 // IsAdmin checks if the currently logged-in user is an admin

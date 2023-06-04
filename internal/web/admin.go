@@ -289,6 +289,7 @@ func PostAdminEditUser(c *gin.Context) {
 	} else {
 		User.IsAdmin = true
 	}
+	User.Password, _ = HashPassword(c.PostForm("password"))
 	database.DB.Save(&User)
 	c.Redirect(http.StatusFound, "/admin/users")
 }
