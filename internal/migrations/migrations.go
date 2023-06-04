@@ -2,15 +2,15 @@
 package migrations
 
 import (
+	"code.videolan.org/videolan/CrashDragon/internal/database"
+	"code.videolan.org/videolan/CrashDragon/internal/web"
+	uuid "github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"code.videolan.org/videolan/CrashDragon/internal/database"
-	uuid "github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -35,12 +35,29 @@ func RunMigrations() {
 	dbMigrations()
 
 	var Migration database.Migration
-	database.DB.First(&Migration, "component = 'database'")
+	database.DB.Order("updated_at DESC").First(&Migration)
+	//database.DB.First(&Migration, "component = 'database'")
 	switch Migration.Version {
 	case ver131:
 		log.Printf("Database migration is version 1.3.1")
-		database.DB.Exec("ALTER TABLE users ADD COLUMN password TEXT;")
-		database.DB.Exec("INSERT INTO users (name, is_admin, password)\nVALUES ('TestAdmin', TRUE, crypt('removethisuser', gen_salt('bf')));")
+
+		var cnt int64
+		var User database.User
+		database.DB.Where("password is not null").First(&User).Count(&cnt)
+		if cnt == 0 {
+			var TempAdmin database.User
+			TempAdmin.ID = uuid.NewV4()
+			TempAdmin.Name = "TempAdmin"
+			TempAdmin.IsAdmin = true
+			var err error
+			TempAdmin.Password, err = web.HashPassword("removethisuser")
+			if err != nil {
+				log.Fatalf("Cannot hash temporary user' password %+v", err)
+			}
+			database.DB.Create(&TempAdmin)
+		}
+
+		database.DB.Exec("UPDATE migrations SET version = '" + ver131 + "';")
 	case ver130:
 		log.Printf("Database migration is version 1.3.0")
 		database.DB.Exec("ALTER TABLE reports DROP COLUMN IF EXISTS deleted_at;")
@@ -163,10 +180,12 @@ func dbMigrations() {
 	var Migrations []database.Migration
 	var cnt int64
 	database.DB.Find(&Migrations).Count(&cnt)
-	if cnt != 2 {
+	if cnt != 3 {
 		var cd = database.Migration{ID: uuid.NewV4(), Component: "crashdragon", Version: curVer}
 		database.DB.Create(&cd)
 		var db = database.Migration{ID: uuid.NewV4(), Component: "database", Version: curVer}
 		database.DB.Create(&db)
+		var up = database.Migration{ID: uuid.NewV4(), Component: "user_password", Version: curVer}
+		database.DB.Create(&up)
 	}
 }

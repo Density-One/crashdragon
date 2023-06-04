@@ -53,12 +53,12 @@ var Versions []Version
 // User defines the structure of a user
 type User struct {
 	ID        uuid.UUID `gorm:"primaryKey" sql:"type:uuid NOT NULL DEFAULT NULL" json:",omitempty"`
-	CreatedAt time.Time `json:",omitempty"`
-	UpdatedAt time.Time `json:",omitempty"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:",omitempty"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:",omitempty"`
 
 	Name     string `gorm:"uniqueIndex"`
 	IsAdmin  bool
-	Password string `gorm:"not null"`
+	Password string
 
 	Comments []Comment `json:"-"`
 }
@@ -285,6 +285,7 @@ func InitDB(connection string) error {
 		log.Fatalf("AutoMigrate Database error: %+v", err)
 		return err
 	}
+
 	DB.Order("name ASC").Find(&Products)
 	DB.Order("string_to_array(regexp_replace(name, '[^0-9.]', '', 'g'), '.')::int[]").Find(&Versions)
 	return err
