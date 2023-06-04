@@ -11,7 +11,7 @@ ENV PATH $PATH:/crashdragon/depot_tools
 RUN cd crashdragon/third_party && fetch breakpad && mv src/* breakpad/ && cd breakpad && ./configure && make -j$(nproc)
 RUN cd crashdragon && go mod tidy && make && make prefix=/opt/crashdragon install
 
-FROM golang:1.20.3-bullseye
+FROM golang:1.20.4-bullseye
 RUN apt-get update && apt-get -y install postgresql
 COPY --from=crashdragon_builder /opt/crashdragon /opt/crashdragon
 WORKDIR /opt/crashdragon/bin
