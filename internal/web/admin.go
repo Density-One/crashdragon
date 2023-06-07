@@ -81,8 +81,12 @@ func PostAdminNewProduct(c *gin.Context) {
 		return
 	}
 	Product.ID = id
-	Product.Slug = c.PostForm("slug")
 	Product.Name = c.PostForm("name")
+
+	if slug := c.PostForm("slug"); len(slug) == 0 {
+		Product.Slug = Product.Name
+	}
+
 	database.DB.Create(&Product)
 	c.Redirect(http.StatusFound, "/admin/products")
 }
@@ -113,7 +117,10 @@ func PostAdminEditProduct(c *gin.Context) {
 
 // GetAdminDeleteProduct deletes a product from the database
 func GetAdminDeleteProduct(c *gin.Context) {
-	database.DB.Delete(database.Product{}, "ID = ?", c.Param("id"))
+
+	if param := c.Param("id"); len(param) > 0 {
+		database.DB.Delete(&database.Product{}, "ID = ?", param)
+	}
 	c.Redirect(http.StatusFound, "/admin/products")
 }
 
@@ -161,9 +168,22 @@ func PostAdminNewVersion(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	name := c.PostForm("name")
+	if len(name) == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	Version.Name = name
 	Version.ProductID = id
-	Version.Slug = c.PostForm("slug")
-	Version.Name = c.PostForm("name")
+
+	if slug := c.PostForm("slug"); len(slug) > 0 {
+		Version.Slug = slug
+	} else {
+		Version.Slug = Version.Name
+	}
+
 	Version.GitRepo = c.PostForm("gitrepo")
 	if ign := c.DefaultPostForm("ignore", "off"); ign == checkboxOff {
 		Version.Ignore = false
@@ -297,7 +317,9 @@ func PostAdminEditUser(c *gin.Context) {
 
 // GetAdminDeleteUser deletes a user from the database
 func GetAdminDeleteUser(c *gin.Context) {
-	database.DB.Delete(database.User{}, "ID = ?", c.Param("id"))
+	if param := c.Param("id"); len(param) > 0 {
+		database.DB.Delete(&database.User{}, "ID = ?", param)
+	}
 	c.Redirect(http.StatusFound, "/admin/users")
 }
 
