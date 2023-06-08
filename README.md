@@ -1,3 +1,47 @@
+## CrashDragon Deployment - Density
+
+This is how to deploy CrashDragon step by step. We are currently running our build of CrashDragon image from Google Cloud Artifact Registry and using Google Cloud Kubernetes Engine for running and managing it.
+
+Kubernetes CLI (kubectl) installation is a prerequisite: https://kubernetes.io/docs/tasks/tools/
+
+Clone our CrashDragon fork (develop is the default and up to date branch) and navigate to "deploy" directory in it.
+```
+git clone https://github.com/Density-One/crashdragon.git
+```
+
+Build and push a new image to Google Cloud Artifact Registry. Make sure to increase the version number before pushing new image. gcloud CLI is the approach used, here's the installation documentation: https://cloud.google.com/sdk/docs/install
+```
+gcloud builds submit --tag us-east4-docker.pkg.dev/fine-volt-323320/crashdragon/crashdragon:0.0.4 .
+```
+
+The image is using entrypoint.sh script to setup the PostgreSQL database connection and some other CrashDragon configuration so before we deploy we have to create a kubernetes secret with DB connection string and this is how to do it:
+```
+kubectl create secret generic crashdragon-db \
+  --from-literal=db_user='dbusername' \
+  --from-literal=db_password='dbpassword' \
+  --from-literal=db_name='dbname' \
+  --from-literal=db_host='xxx.xxx.xxx.xxx' \
+  --from-literal=db_sslmode='disable'
+```
+
+Make sure to replace the values with actual values for DB connection, the values are later base64 encoded and stored in kuberentes as a secret.
+
+For modifying DB connection string data you can edit an existing secret and change the value, but you have to encode the desired value in base64 and replace an existing base64 encoded value in it:
+```
+kubectl edit secrets crashdragon-db
+```
+
+To edit an existing deployment, you can update it by modifying the deployment manifest file and applying the same way as it is deployed the first time. You will have to edit the image version in it for example every time the image is updated.
+```
+kubectl apply -f crashdragon-deployment.yaml
+```
+
+Modifying or creating a kubernetes service used to expose the app to be accessible publicly on internet:
+```
+kubectl apply -f crashdragon-service.yaml
+```
+
+
 ## What is CrashDragon?
 
 CrashDragon is a simple Minidump server, inspired by
