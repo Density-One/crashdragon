@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: crashdragon
-        image: us-east4-docker.pkg.dev/fine-volt-323320/crashdragon/crashdragon:0.0.4
+        image: us-east4-docker.pkg.dev/fine-volt-323320/crashdragon/crashdragon:0.0.6
         ports:
         - containerPort: 8080
         envFrom:
