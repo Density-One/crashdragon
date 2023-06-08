@@ -1,9 +1,15 @@
 package web
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"fmt"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
+	"io"
+	"log"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
@@ -112,4 +118,97 @@ func HashPassword(password string) (string, error) {
 
 func VerifyPassword(hashedPassword string, candidatePassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(candidatePassword))
+}
+
+func sendMessageToSlack(message string) {
+	// Prepare the JSON payload
+	jsonPayload := "{\"text\":\"" + message + "\"}"
+	payload := []byte(jsonPayload)
+
+	// Create an HTTP client
+	client := &http.Client{}
+
+	// Create a new POST request
+	request, err := http.NewRequest("POST", viper.GetString("Slack.webhook"), bytes.NewBuffer(payload))
+	if err != nil {
+		fmt.Println("Error creating request: ", err)
+		return
+	}
+
+	// Add headers
+	request.Header.Set("Content-Type", "application/json")
+
+	// Send the request
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Println("Error sending request: ", err)
+		return
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(response.Body)
+
+	// Print the response status code
+	fmt.Println("Response Status: ", response.Status)
+}
+
+func readCompressed(c *gin.Context) {
+	contentEncoding := c.Request.Header.Get("Content-Encoding")
+	if contentEncoding == "gzip" {
+
+		body := c.Request.Body
+		reader, err := gzip.NewReader(body)
+		if err != nil {
+			log.Println("Failed to create gzip reader:", err)
+			c.String(http.StatusInternalServerError, "Failed to read request body")
+			return
+		}
+
+		defer func(reader *gzip.Reader) {
+			err := reader.Close()
+			if err != nil {
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+		}(reader)
+
+		// Read the decompressed request body
+		requestBody, err := io.ReadAll(reader)
+		if err != nil {
+			log.Println("Failed to read decompressed request body:", err)
+			c.String(http.StatusInternalServerError, "Failed to read request body")
+			return
+		}
+
+		// Print the request body
+		fmt.Println(string(requestBody))
+
+		bodyReader := multipart.NewReader(bytes.NewReader(requestBody), c.Request.Header.Get("Content-Type"))
+		form, err := bodyReader.ReadForm(int64(len(requestBody))) // Specify max memory size for the form
+		if err != nil {
+			log.Println("Failed to read multipart form:", err)
+			c.String(http.StatusBadRequest, "Failed to read multipart form")
+			return
+		}
+
+		// Access the fields in the multipart form
+		for key, values := range form.Value {
+			// Iterate over the values of each field
+			for _, value := range values {
+				fmt.Printf("Field: %s, Value: %s\n", key, value)
+			}
+		}
+
+		// You can process the body data here as per your requirements
+
+		// Send a response
+		c.String(http.StatusOK, "Received the request body")
+
+	} else {
+		// Content-Encoding is not "gzip", handle it accordingly
+		// ...
+	}
 }
