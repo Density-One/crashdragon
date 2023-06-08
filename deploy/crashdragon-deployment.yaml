@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crashdragon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crashdragon
+  template:
+    metadata:
+      labels:
+        app: crashdragon
+    spec:
+      containers:
+      - name: crashdragon
+        image: us-east4-docker.pkg.dev/fine-volt-323320/crashdragon/crashdragon:0.0.4
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - secretRef:
+            name: crashdragon-db
+
