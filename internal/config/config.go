@@ -29,6 +29,7 @@ func GetConfig() error {
 		viper.SetDefault("Symbolicator.Executable", "./minidump_stackwalk")
 		viper.SetDefault("Symbolicator.TrimModuleNames", true)
 		viper.SetDefault("Housekeeping.ReportRetentionTime", "2190h") // Around 3 months (duration only supports times in hours and down due to irregular length of days/months/years)
+		viper.SetDefault("Slack.webhook", "https://hooks.slack.com/services/")
 
 		// Get the path of the Go executable
 		exePath, err := os.Executable()
