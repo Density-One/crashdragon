@@ -18,8 +18,42 @@ import (
 )
 
 // PostReports processes crashreport
+//
 //nolint:funlen
 func PostReports(c *gin.Context) {
+	var Product database.Product
+	product := c.Request.FormValue("product")
+	err := database.DB.First(&Product, "slug = ?", product).Error
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	version := c.Request.FormValue("version")
+	var Version database.Version
+
+	if err = database.DB.First(&Version, "slug = ? AND product_id = ? AND ignore = false", version, Product.ID).Error; err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var Report database.Report
+	Report.Processed = false
+	Report.ID = uuid.NewV4()
+
+	filepth := filepath.Join(viper.GetString("Directory.Content"), "Reports", Report.ID.String()[0:2], Report.ID.String()[0:4])
+	err = os.MkdirAll(filepth, 0750)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	f, err := os.Create(filepath.Join(filepth, Report.ID.String()+".dmp"))
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
 	file, _, err := c.Request.FormFile("upload_file_minidump")
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -31,40 +65,7 @@ func PostReports(c *gin.Context) {
 			log.Printf("Error closing Minidump file after upload: %+v", err)
 		}
 	}()
-	var Report database.Report
-	Report.Processed = false
-	Report.ID = uuid.NewV4()
 
-	var Product database.Product
-	if err = database.DB.First(&Product, "slug = ?", c.Request.FormValue("prod")).Error; err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-	Report.ProductID = Product.ID
-	Report.Product = Product
-
-	var Version database.Version
-	if err = database.DB.First(&Version, "slug = ? AND product_id = ? AND ignore = false", c.Request.FormValue("ver"), Report.ProductID).Error; err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-	Report.VersionID = Version.ID
-	Report.Version = Version
-
-	Report.ProcessUptime, _ = strconv.ParseUint(c.Request.FormValue("ptime"), 10, 64)
-	Report.EMail = c.Request.FormValue("email")
-	Report.Comment = c.Request.FormValue("comments")
-	filepth := filepath.Join(viper.GetString("Directory.Content"), "Reports", Report.ID.String()[0:2], Report.ID.String()[0:4])
-	err = os.MkdirAll(filepth, 0750)
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-	f, err := os.Create(filepath.Join(filepth, Report.ID.String()+".dmp"))
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
 	_, err = io.Copy(f, file)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -78,6 +79,19 @@ func PostReports(c *gin.Context) {
 	if err != nil {
 		log.Printf("Error closing the local minidump: %+v", err)
 	}
+
+	sendMessageToSlack(product + " " + version + " crashed")
+
+	Report.ProductID = Product.ID
+	Report.Product = Product
+
+	Report.VersionID = Version.ID
+	Report.Version = Version
+
+	Report.ProcessUptime, _ = strconv.ParseUint(c.Request.FormValue("ptime"), 10, 64)
+	Report.EMail = c.Request.FormValue("email")
+	Report.Comment = c.Request.FormValue("comments")
+
 	processor.AddToQueue(Report)
 	c.JSON(http.StatusCreated, gin.H{
 		"status": http.StatusCreated,
@@ -95,6 +109,7 @@ func ReprocessReport(c *gin.Context) {
 }
 
 // PostSymfiles processes symfile
+//
 //nolint:funlen,gocognit
 func PostSymfiles(c *gin.Context) {
 	file, _, err := c.Request.FormFile("symfile")
