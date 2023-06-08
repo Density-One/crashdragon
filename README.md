@@ -22,6 +22,7 @@ kubectl create secret generic crashdragon-db \
   --from-literal=db_name='dbname' \
   --from-literal=db_host='xxx.xxx.xxx.xxx' \
   --from-literal=db_sslmode='disable'
+  --from-literal=slack_webhook='webhookurl'
 ```
 
 Make sure to replace the values with actual values for DB connection, the values are later base64 encoded and stored in kuberentes as a secret.
