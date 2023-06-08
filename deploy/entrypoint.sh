@@ -10,6 +10,8 @@ content = "/opt/crashdragon/share/crashdragon/files"
 templates = "/opt/crashdragon/share/crashdragon/templates"
 [housekeeping]
 reportretentiontime = "2190h"
+[slack]
+webhook = "https://hooks.slack.com/services/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"
 [symbolicator]
 executable = "./minidump_stackwalk"
 trimmodulenames = true
