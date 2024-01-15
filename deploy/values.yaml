@@ -1,0 +1,4 @@
+controller:
+  service:
+    annotations:
+      kubernetes.io/ingress.global-static-ip-name: crashdragonip
